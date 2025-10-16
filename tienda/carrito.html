@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Tienda — Carrito</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link href="../assets/css/tienda.css" rel="stylesheet">
+</head>
+<body>
+
+
+  <main class="container section">
+    <nav class="breadcrumb">
+      <a href="./index.html">Inicio</a> / <a href="./productos.html">Productos</a> / <span>Carrito</span>
+    </nav>
+
+    <h1 style="margin:0 0 .8rem 0">Carrito de compras</h1>
+
+    <section id="empty" class="card" style="display:none; padding: var(--g4);">
+      <p style="margin:0 0 .8rem; color:#b8c0cc">Tu carrito está vacío.</p>
+      <a class="btn btn-primary" href="./productos.html">Ver productos</a>
+    </section>
+
+    <section id="cartWrap" class="card" style="display:none; padding: var(--g4);">
+      <div class="toolbar" style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+        <div class="meta"><span id="itemsCount">0</span> ítem(s)</div>
+        <span style="flex:1 1 auto"></span>
+        <button id="btnClear" class="btn btn-ghost">Vaciar carrito</button>
+      </div>
+
+      <div class="table-wrap" style="overflow:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:84px">Img</th>
+              <th>Producto</th>
+              <th style="width:140px">Precio</th>
+              <th style="width:200px">Cantidad</th>
+              <th style="width:140px">Subtotal</th>
+              <th class="right" style="width:120px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="right" style="font-weight:700">Total</td>
+              <td id="total" style="font-weight:700">—</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px">
+        <a class="btn btn-ghost" href="./productos.html">Seguir comprando</a>
+        <a class="btn btn-primary" id="btnCheckout" href="./checkout.html">Continuar al pago</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="../assets/js/datos.js"></script>
+
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/ui.js"></script>
+
+  <script>
+  (function(){
+    const LS_CART = 'nxv3_cart';
+    const CLP = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 });
+
+    const $ = s => document.querySelector(s);
+    const tbody = $('#tbody');
+    const empty = $('#empty');
+    const wrap  = $('#cartWrap');
+    const itemsCount = $('#itemsCount');
+    const totalEl = $('#total');
+    const btnClear = $('#btnClear');
+
+    function readCart(){ try { return JSON.parse(localStorage.getItem(LS_CART) || '[]'); } catch { return []; } }
+    function writeCart(arr){
+      localStorage.setItem(LS_CART, JSON.stringify(arr));
+      try{
+        const size = arr.reduce((s,i)=> s + Number(i.qty||0), 0);
+        window.dispatchEvent(new CustomEvent('nx:cart-changed', { detail:{ size } }));
+      }catch{}
+    }
+
+    function rowHTML(item, p){
+      const id = String(item.id);
+      const href = './detalle-producto.html?id=' + encodeURIComponent(id);
+      const img = (p.imagen && String(p.imagen).trim()) ? p.imagen : '../assets/img/placeholder/product-1.jpg';
+      const price = Number(p.precio||0);
+      const qty = Number(item.qty||0);
+      const stock = Number(p.stock||0);
+      const name = p.nombre || 'Producto';
+
+      return `
+        <tr data-id="${id}">
+          <td><a href="${href}"><img src="${img}" alt="${name}" width="72" height="48" style="width:72px;height:48px;object-fit:cover"></a></td>
+          <td>
+            <a href="${href}" style="color:#fff;font-weight:700">${name}</a>
+            <div class="meta">${p.categoria || 'Otros'}</div>
+          </td>
+          <td>${CLP.format(price)}</td>
+          <td>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button class="btn btn-ghost btn-small" data-dec aria-label="Disminuir">−</button>
+              <input class="input" data-qty type="number" min="1" max="${Math.max(1,stock)}" step="1" value="${qty}" style="width:92px;text-align:center">
+              <button class="btn btn-ghost btn-small" data-inc aria-label="Aumentar">+</button>
+              <span class="meta" style="margin-left:6px">/ stock: ${stock}</span>
+            </div>
+          </td>
+          <td data-sub>${CLP.format(price * qty)}</td>
+          <td class="right">
+            <button class="btn btn-ghost btn-small" data-remove>Quitar</button>
+          </td>
+        </tr>`;
+    }
+
+    function clamp(n, min, max){ return Math.min(Math.max(n, min), max); }
+
+    function render(){
+      const cart = readCart();
+      if(!cart.length){
+        wrap.style.display='none';
+        empty.style.display='block';
+        itemsCount.textContent = '0';
+        totalEl.textContent = CLP.format(0);
+        return;
+      }
+
+      let html = '';
+      let total = 0;
+      let totalItems = 0;
+
+      cart.forEach(item=>{
+        const p = (DB && DB.products && DB.products.get) ? DB.products.get(item.id) : null;
+        if(!p){ return; }
+
+        const max = Math.max(1, Number(p.stock||1));
+        item.qty = clamp(Number(item.qty||1), 1, max);
+
+        total += Number(p.precio||0) * item.qty;
+        totalItems += item.qty;
+
+        html += rowHTML(item, p);
+      });
+
+      tbody.innerHTML = html;
+      totalEl.textContent = CLP.format(total);
+      itemsCount.textContent = String(totalItems);
+      empty.style.display='none';
+      wrap.style.display='block';
+
+      writeCart(cart);
+    }
+
+    tbody.addEventListener('click', (e)=>{
+      const tr = e.target.closest('tr[data-id]');
+      if(!tr) return;
+      const id = tr.getAttribute('data-id');
+      let cart = readCart();
+      const ix = cart.findIndex(it => String(it.id) === String(id));
+      if(ix < 0) return;
+
+      const p = (DB && DB.products && DB.products.get) ? DB.products.get(id) : null;
+      const stock = Math.max(1, Number(p?.stock||1));
+
+      if(e.target.closest('[data-dec]')){
+        const next = clamp(Number(cart[ix].qty||1) - 1, 1, stock);
+        cart[ix].qty = next;
+        writeCart(cart);
+        render();
+        return;
+      }
+      if(e.target.closest('[data-inc]')){
+        const next = clamp(Number(cart[ix].qty||1) + 1, 1, stock);
+        cart[ix].qty = next;
+        writeCart(cart);
+        render();
+        return;
+      }
+      if(e.target.closest('[data-remove]')){
+        cart.splice(ix, 1);
+        writeCart(cart);
+        render();
+        return;
+      }
+    });
+
+    tbody.addEventListener('input', (e)=>{
+      const input = e.target.closest('input[data-qty]');
+      if(!input) return;
+      const tr = e.target.closest('tr[data-id]');
+      const id = tr.getAttribute('data-id');
+
+      let cart = readCart();
+      const ix = cart.findIndex(it => String(it.id) === String(id));
+      if(ix < 0) return;
+
+      const p = (DB && DB.products && DB.products.get) ? DB.products.get(id) : null;
+      const stock = Math.max(1, Number(p?.stock||1));
+      const val = clamp(Number(input.value||1), 1, stock);
+      cart[ix].qty = val;
+      writeCart(cart);
+      render();
+    });
+
+    btnClear.addEventListener('click', ()=>{
+      if(!confirm('¿Vaciar el carrito?')) return;
+      writeCart([]);
+      render();
+    });
+
+    render();
+  })();
+  </script>
+</body>
+</html>

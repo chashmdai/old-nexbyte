@@ -1,0 +1,42 @@
+[
+  {
+    "id": "1",
+    "nombre": "Teclado mecánico TKL",
+    "categoria": "Teclados",
+    "precio": 39990,
+    "stock": 12,
+    "imagen": "",
+    "descripcion": "Switches rojos, 87 teclas, cable USB-C.",
+    "activo": true
+  },
+  {
+    "id": "2",
+    "nombre": "Audífonos over-ear",
+    "categoria": "Audio",
+    "precio": 29990,
+    "stock": 8,
+    "imagen": "",
+    "descripcion": "Sonido estéreo, micrófono desmontable.",
+    "activo": true
+  },
+  {
+    "id": "3",
+    "nombre": "Mouse inalámbrico",
+    "categoria": "Mouse",
+    "precio": 19990,
+    "stock": 15,
+    "imagen": "",
+    "descripcion": "Sensor 12K DPI, 6 botones programables.",
+    "activo": true
+  },
+  {
+    "id": "4",
+    "nombre": "Pad mouse XL",
+    "categoria": "Accesorios",
+    "precio": 9990,
+    "stock": 20,
+    "imagen": "",
+    "descripcion": "800×300 mm, base antideslizante.",
+    "activo": true
+  }
+]

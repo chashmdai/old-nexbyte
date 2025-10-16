@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Tienda — Detalle de producto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link href="../assets/css/tienda.css" rel="stylesheet">
+</head>
+<body>
+
+
+  <main class="container section">
+    <nav class="breadcrumb">
+      <a href="./index.html">Inicio</a> / <a href="./productos.html">Productos</a> / <span id="bc-name">Detalle</span>
+    </nav>
+
+    <section id="notFound" class="card" style="display:none; padding: var(--g4);">
+      <p style="margin:0 0 .8rem; color:#ffb4b4">No encontramos este producto.</p>
+      <a class="btn btn-ghost" href="./productos.html">Volver a productos</a>
+    </section>
+
+    <section id="view" class="card reveal" style="display:none; padding: var(--g4);">
+      <div style="display:grid; grid-template-columns:minmax(260px, 440px) 1fr; gap: var(--g4); align-items:start;">
+        <figure style="margin:0; border-radius: var(--radius); overflow:hidden; background:#0c0f14; height:320px;">
+          <img id="pImg" alt="Imagen del producto" style="width:100%; height:100%; object-fit:cover; display:block;">
+        </figure>
+
+        <div>
+          <div id="pCat" class="meta" style="margin-bottom:.25rem">—</div>
+          <h1 id="pName" style="margin:0 0 .4rem 0">—</h1>
+
+          <div style="display:flex; align-items:center; gap:10px; margin:.4rem 0 1rem;">
+            <div id="pPrice" class="price">$0</div>
+            <span id="pStock" class="nb-pill">0</span>
+            <span class="meta">#<span id="pId">—</span></span>
+          </div>
+
+          <p id="pDesc" style="margin:0 0 1rem 0">—</p>
+
+          <div id="buyZone" style="display:flex; gap:10px; align-items:center;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button class="btn btn-ghost btn-small" id="btnDec" aria-label="Disminuir">−</button>
+              <input type="number" id="qty" class="input" value="1" min="1" step="1" aria-label="Cantidad" style="width:92px; text-align:center;">
+              <button class="btn btn-ghost btn-small" id="btnInc" aria-label="Aumentar">+</button>
+            </div>
+            <button id="btnAdd" class="btn btn-primary">Agregar al carrito</button>
+          </div>
+
+          <div id="noBuy" class="meta" style="display:none; margin-top:.6rem;">Este producto no está disponible.</div>
+
+          <div style="margin-top:12px">
+            <a class="btn btn-ghost" href="./productos.html">Volver a productos</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../assets/js/datos.js"></script>
+
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/ui.js"></script>
+
+  <script>
+  (function(){
+    const LS_CART = 'nxv3_cart';
+    const CLP = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 });
+
+    const $ = sel => document.querySelector(sel);
+    function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+    function readCart(){ try { return JSON.parse(localStorage.getItem(LS_CART) || '[]'); } catch { return []; } }
+    function writeCart(arr){
+      localStorage.setItem(LS_CART, JSON.stringify(arr));
+      try{
+        const size = arr.reduce((s,i)=>s+Number(i.qty||0),0);
+        window.dispatchEvent(new CustomEvent('nx:cart-changed', { detail:{ size } }));
+      }catch{}
+    }
+    function getParam(name){
+      const u = new URL(location.href);
+      return u.searchParams.get(name);
+    }
+
+    const notFound = $('#notFound');
+    const view = $('#view');
+
+    const pImg   = $('#pImg');
+    const pName  = $('#pName');
+    const pCat   = $('#pCat');
+    const pPrice = $('#pPrice');
+    const pStock = $('#pStock');
+    const pId    = $('#pId');
+    const pDesc  = $('#pDesc');
+    const bcName = $('#bc-name');
+
+    const buyZone = $('#buyZone');
+    const noBuy   = $('#noBuy');
+    const btnAdd  = $('#btnAdd');
+    const btnDec  = $('#btnDec');
+    const btnInc  = $('#btnInc');
+    const qtyIn   = $('#qty');
+
+    const id = getParam('id');
+    let P = null;
+
+    function load(){
+      try{ P = DB.products.get(id); }catch{ P = null; }
+      if(!P){ notFound.style.display='block'; view.style.display='none'; return; }
+
+      const imgSrc = (P.imagen && String(P.imagen).trim())
+        ? P.imagen
+        : '../assets/img/placeholder/product-1.jpg';
+      pImg.src = imgSrc;
+      pName.textContent  = P.nombre || 'Producto';
+      bcName.textContent = P.nombre || 'Producto';
+      pCat.textContent   = P.categoria || 'Otros';
+      pPrice.textContent = CLP.format(Number(P.precio||0));
+      pId.textContent    = String(P.id || id);
+      pDesc.textContent  = P.descripcion || 'Producto sin descripción.';
+
+      const stock = Number(P.stock || 0);
+      pStock.textContent = 'Stock: ' + stock;
+
+      const disponible = !!P.activo && stock > 0;
+      buyZone.style.display = disponible ? 'flex' : 'none';
+      noBuy.style.display   = disponible ? 'none' : 'block';
+
+      qtyIn.value = '1';
+      qtyIn.max   = String(Math.max(1, stock));
+      notFound.style.display='none';
+      view.style.display='block';
+    }
+
+    function clampQty(v){
+      const max = Math.max(1, Number(P?.stock||1));
+      return Math.min(Math.max(1, Number(v||1)), max);
+    }
+    btnDec.addEventListener('click', ()=>{ qtyIn.value = clampQty(Number(qtyIn.value)-1); });
+    btnInc.addEventListener('click', ()=>{ qtyIn.value = clampQty(Number(qtyIn.value)+1); });
+    qtyIn.addEventListener('input', ()=>{ qtyIn.value = clampQty(qtyIn.value); });
+
+    btnAdd.addEventListener('click', ()=>{
+      if(!P) return;
+      const addQty = clampQty(qtyIn.value);
+      const stock  = Number(P.stock||0);
+      if(!P.activo || stock <= 0){ alert('Producto no disponible.'); return; }
+
+      const cart = readCart();
+      const i = cart.findIndex(it => String(it.id) === String(P.id));
+      const current = i >= 0 ? Number(cart[i].qty||0) : 0;
+      const next = Math.min(stock, current + addQty);
+      if(next <= current){ alert('No hay más stock disponible.'); return; }
+      if(i >= 0) cart[i].qty = next; else cart.push({ id:String(P.id), qty:addQty });
+      writeCart(cart);
+
+      btnAdd.textContent='Agregado ✓';
+      setTimeout(()=> btnAdd.textContent='Agregar al carrito', 900);
+    });
+
+    load();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Nuevo producto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+  <style>
+    .form-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+    @media (max-width:900px){.form-grid{grid-template-columns:1fr}}
+    .help{color:var(--ad-muted);font-size:.9rem}
+    .preview-card.card{padding:0;overflow:hidden}
+    .preview-card .thumb{height:180px;border-bottom:1px solid var(--ad-border);background:#0c1422 center/cover no-repeat}
+    .preview-card .body{padding:12px}
+    .preview-card .title{font-weight:700;line-height:1.3}
+    .preview-card .meta{color:var(--ad-muted);margin-top:2px}
+    .preview-card .price{margin-top:8px;font-weight:800}
+    .preview-card .empty{display:flex;align-items:center;justify-content:center;height:180px;color:var(--ad-muted)}
+    .badge-chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:.85rem;background:rgba(255,255,255,.06);margin-left:8px;color:var(--ad-muted)}
+    .ghost-price{min-width:90px;color:var(--ad-muted);font-size:.9rem;align-self:flex-end}
+    .sticky-actions{position:sticky;bottom:10px;z-index:2;margin-top:12px;display:flex;gap:10px;justify-content:flex-start;background:rgba(15,22,35,.75);backdrop-filter:saturate(160%) blur(10px);border:1px solid var(--ad-border);box-shadow:var(--ad-shadow);padding:10px;border-radius:12px}
+    #errs{border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:#fecaca;padding:10px;border-radius:10px;margin-top:8px}
+    #errs.hidden{display:none}
+    .invalid{border-color:rgba(239,68,68,.6)!important;box-shadow:0 0 0 3px rgba(239,68,68,.15)!important}
+  </style>
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main id="admin-main" class="a-main container">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a><span class="sep">/</span>
+        <a href="productos-listado.html">Productos</a><span class="sep">/</span>
+        <span class="muted">Nuevo</span>
+      </nav>
+
+      <h1>Nuevo producto</h1>
+      <p class="muted">Completa los campos y guarda para agregarlo al inventario.</p>
+
+      <form id="frm" class="form" novalidate>
+        <div class="form-grid">
+          <div>
+            <div class="field">
+              <label for="fNombre">Nombre *</label>
+              <input id="fNombre" class="input" type="text" required minlength="2" maxlength="120" placeholder="Ej: Teclado mecánico TKL">
+              <div class="help">Obligatorio. Mínimo 2 caracteres.</div>
+            </div>
+
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+              <div class="field">
+                <label for="fPrecio">Precio (CLP) *</label>
+                <div style="display:flex;gap:8px;align-items:flex-end">
+                  <input id="fPrecio" class="input" type="number" inputmode="numeric" min="0" step="1" required placeholder="Ej: 39990" style="flex:1 1 auto">
+                  <div id="fPrecioGhost" class="ghost-price">$0</div>
+                </div>
+                <div class="help">Solo números, igual o mayor a 0.</div>
+              </div>
+
+              <div class="field">
+                <label for="fStock">Stock *</label>
+                <input id="fStock" class="input" type="number" inputmode="numeric" min="0" step="1" required placeholder="Ej: 10">
+                <div class="help">Entero, igual o mayor a 0.</div>
+              </div>
+
+              <div class="field">
+                <label for="fCategoria">Categoría *</label>
+                <select id="fCategoria" class="input" required>
+                  <option value="">Seleccione…</option>
+                </select>
+                <div class="help">Elige una categoría existente u “Otros”.</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="fDescripcion">Descripción</label>
+              <textarea id="fDescripcion" class="input" rows="4" placeholder="Detalles, materiales, compatibilidad, etc."></textarea>
+            </div>
+
+            <div class="grid" style="grid-template-columns:1fr;gap:12px">
+              <div class="field" style="max-width:520px">
+                <label for="fImagen">Imagen (URL)</label>
+                <input id="fImagen" class="input" type="url" placeholder="https://…">
+                <div class="help">Opcional. Debe ser una URL válida (http/https).</div>
+              </div>
+
+              <div class="field" style="display:flex;align-items:center;gap:8px">
+                <input id="fActivo" type="checkbox" checked>
+                <label for="fActivo">Producto activo</label>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:6px">Previsualización</label>
+            <div class="preview-card card">
+              <div id="prevThumb" class="thumb"><div id="prevEmpty" class="empty">Sin imagen</div></div>
+              <div class="body">
+                <div class="title">
+                  <span id="prevName">Nombre del producto</span>
+                  <span id="prevChip" class="badge-chip">inactivo</span>
+                </div>
+                <div id="prevCat" class="meta">Categoría</div>
+                <div id="prevPrice" class="price">$0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="errs" class="hidden" role="alert" aria-live="polite"></div>
+
+        <div class="sticky-actions">
+          <button id="btnSave" class="btn primary" type="submit" disabled>Guardar</button>
+          <button id="btnSaveNew" class="btn" type="button" disabled>Guardar y nuevo</button>
+          <a class="btn" href="productos-listado.html">Cancelar</a>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+
+  <script src="../assets/js/datos.js"></script>
+  <script src="../assets/js/layout-admin.js"></script>
+  <script>
+    AX.mountLayout();
+    const $frm=document.getElementById('frm'),$errs=document.getElementById('errs');
+    const $fNombre=document.getElementById('fNombre'),$fPrecio=document.getElementById('fPrecio'),$fPrecioGhost=document.getElementById('fPrecioGhost'),$fStock=document.getElementById('fStock'),$fCategoria=document.getElementById('fCategoria'),$fDescripcion=document.getElementById('fDescripcion'),$fImagen=document.getElementById('fImagen'),$fActivo=document.getElementById('fActivo');
+    const $btnSave=document.getElementById('btnSave'),$btnSaveNew=document.getElementById('btnSaveNew');
+    const $prevThumb=document.getElementById('prevThumb'),$prevEmpty=document.getElementById('prevEmpty'),$prevName=document.getElementById('prevName'),$prevCat=document.getElementById('prevCat'),$prevPrice=document.getElementById('prevPrice'),$prevChip=document.getElementById('prevChip');
+    const CLP=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+    const $=s=>document.querySelector(s);
+
+    function showErrs(list){if(!list.length){$errs.classList.add('hidden');$errs.innerHTML='';return}$errs.classList.remove('hidden');$errs.innerHTML=list.map(e=>'• '+e).join('<br>')}
+    function isHttpUrl(s){try{const u=new URL(s);return u.protocol==='http:'||u.protocol==='https:'}catch{return false}}
+    function testImage(url){return new Promise(res=>{if(!url)return res(false);const img=new Image();img.onload=()=>res(true);img.onerror=()=>res(false);img.src=url})}
+    const sanitize=s=>String(s||'').trim();
+
+    function fillCategories(){
+      let set=new Set();
+      try{const all=DB?.products?.list?DB.products.list():[];all.forEach(p=>{if(p&&p.categoria)set.add(String(p.categoria))})}catch{}
+      ['Accesorios','Audio','Componentes','Periféricos','Almacenamiento','Otros'].forEach(o=>set.add(o));
+      const list=Array.from(set).sort((a,b)=>a.localeCompare(b,'es')),curr=$fCategoria.value;
+      $fCategoria.innerHTML='<option value="">Seleccione…</option>'+list.map(c=>`<option value="${c}">${c}</option>`).join('');
+      if(list.includes(curr))$fCategoria.value=curr;
+    }
+
+    async function updatePreview(){
+      const nombre=sanitize($fNombre.value)||'Nombre del producto',cat=sanitize($fCategoria.value)||'Categoría',price=Number($fPrecio.value||0);
+      $prevName.textContent=nombre;$prevCat.textContent=cat;$prevPrice.textContent=CLP.format(Math.max(0,price));
+      const active=!!$fActivo.checked; $prevChip.textContent=active?'activo':'inactivo'; $prevChip.style.background=active?'rgba(34,197,94,.14)':'rgba(255,255,255,.06)'; $prevChip.style.color=active?'#86efac':'var(--ad-muted)';
+      const url=sanitize($fImagen.value); let ok=false; if(isHttpUrl(url)) ok=await testImage(url);
+      if(ok){$prevThumb.style.backgroundImage=`url("${url.replace(/"/g,'&quot;')}")`;$prevEmpty.style.display='none'} else {$prevThumb.style.backgroundImage='none';$prevEmpty.style.display='flex'}
+    }
+
+    function updateGhostPrice(){const n=Math.max(0,Number($fPrecio.value||0));$fPrecioGhost.textContent=CLP.format(n)}
+
+    function setInvalid(el,on){el.classList.toggle('invalid',!!on);el.setAttribute('aria-invalid',on?'true':'false')}
+
+    function validate(){
+      const errs=[],nombre=sanitize($fNombre.value),precio=Number($fPrecio.value),stock=Number($fStock.value),categoria=sanitize($fCategoria.value),imagen=sanitize($fImagen.value);
+      if(nombre.length<2)errs.push('El nombre debe tener al menos 2 caracteres.');
+      if(!Number.isFinite(precio)||precio<0)errs.push('El precio debe ser un número válido mayor o igual a 0.');
+      if(!Number.isInteger(stock)||stock<0)errs.push('El stock debe ser un entero mayor o igual a 0.');
+      if(!categoria)errs.push('Selecciona una categoría.');
+      if(imagen&&!isHttpUrl(imagen))errs.push('La imagen debe ser una URL http/https válida.');
+      setInvalid($fNombre,nombre.length<2);setInvalid($fPrecio,!(Number.isFinite(precio)&&precio>=0));setInvalid($fStock,!(Number.isInteger(stock)&&stock>=0));setInvalid($fCategoria,!categoria);setInvalid($fImagen,!!imagen&&!isHttpUrl(imagen));
+      const ok=!errs.length; $btnSave.disabled=!ok;$btnSaveNew.disabled=!ok;showErrs(errs);return ok;
+    }
+
+    function collect(){return{nombre:sanitize($fNombre.value),precio:Math.max(0,Number($fPrecio.value||0)),stock:Math.max(0,parseInt($fStock.value||'0',10)||0),categoria:sanitize($fCategoria.value),descripcion:sanitize($fDescripcion.value),activo:!!$fActivo.checked,imagen:sanitize($fImagen.value)}}
+    function resetForm(){$frm.reset();$fPrecioGhost.textContent='$0';updatePreview()}
+
+    ;['input','change'].forEach(ev=>{
+      $fNombre.addEventListener(ev,()=>{validate();updatePreview()});
+      $fPrecio.addEventListener(ev,()=>{updateGhostPrice();validate();updatePreview()});
+      $fStock.addEventListener(ev,()=>{validate();updatePreview()});
+      $fCategoria.addEventListener(ev,()=>{validate();updatePreview()});
+      $fDescripcion.addEventListener(ev,()=>{});
+      $fImagen.addEventListener(ev,()=>{validate();updatePreview()});
+      $fActivo.addEventListener(ev,()=>{updatePreview()});
+    });
+
+    $frm.addEventListener('submit',e=>{e.preventDefault();if(!validate())return;DB.products.add(collect());location.href='productos-listado.html'});
+    $btnSaveNew.addEventListener('click',()=>{if(!validate())return;DB.products.add(collect());resetForm();$fNombre.focus()});
+    addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();$btnSave.click()}});
+
+    fillCategories();updateGhostPrice();updatePreview();validate();
+    addEventListener('nx:products-seeded',()=>{fillCategories()});
+  </script>
+</body>
+</html>

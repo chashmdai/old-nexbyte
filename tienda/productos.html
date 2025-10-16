@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Tienda — Productos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link href="../assets/css/tienda.css" rel="stylesheet">
+</head>
+<body>
+
+
+  <main class="container section">
+    <h1 style="margin:0 0 .8rem 0">PRODUCTOS</h1>
+
+    <div id="empty" class="card" style="margin-top:10px;display:none">
+      <p style="margin:0.9rem;color:#b8c0cc">No hay productos disponibles por ahora.</p>
+      <a class="btn btn-ghost mt-2" href="index.html">Volver al inicio</a>
+    </div>
+
+    <section id="grid" class="products reveal" style="margin-top:10px"></section>
+  </main>
+
+  <script src="../assets/js/datos.js"></script>
+
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/ui.js"></script>
+
+  <script>
+  (function(){
+    const $grid  = document.getElementById('grid');
+    const $empty = document.getElementById('empty');
+    const CLP = new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 });
+    const LS_CART = 'nxv3_cart';
+
+    function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+    function readCart(){ try { return JSON.parse(localStorage.getItem(LS_CART) || '[]'); } catch { return []; } }
+    function writeCart(arr){
+      localStorage.setItem(LS_CART, JSON.stringify(arr));
+      try {
+        const size = arr.reduce((s,i)=>s+Number(i.qty||0),0);
+        window.dispatchEvent(new CustomEvent('nx:cart-changed', { detail:{ size } }));
+      } catch {}
+    }
+
+    function addOne(id){
+      const p = DB.products.get(id);
+      if (!p || !p.activo || Number(p.stock||0) <= 0) { alert('Producto no disponible.'); return; }
+      const cart = readCart();
+      const i = cart.findIndex(it => String(it.id) === String(id));
+      const current = i >= 0 ? Number(cart[i].qty||0) : 0;
+      const next = Math.min(Number(p.stock||0), current + 1);
+      if (next <= current) { alert('No hay más stock disponible.'); return; }
+      if (i >= 0) cart[i].qty = next; else cart.push({ id:String(id), qty:1 });
+      writeCart(cart);
+    }
+
+    function card(p){
+      const id = String(p.id);
+      const imgSrc = (p.imagen && String(p.imagen).trim())
+        ? escapeHtml(p.imagen)
+        : '../assets/img/placeholder/product-1.jpg';
+      const href = 'detalle-producto.html?id=' + encodeURIComponent(id);
+
+      return `
+        <article class="card product" data-id="${id}">
+          <a class="thumb" href="${href}">
+            <img src="${imgSrc}" alt="${escapeHtml(p.nombre||'Producto')}" loading="lazy">
+          </a>
+          <div class="body">
+            <a class="title" href="${href}">${escapeHtml(p.nombre||'')}</a>
+            <div class="meta">${escapeHtml(p.categoria||'Otros')}</div>
+            <div class="price">${CLP.format(Number(p.precio||0))}</div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary btn-small" data-add>Agregar</button>
+          </div>
+        </article>`;
+    }
+
+    function getAll(){
+      try{
+        const all = (DB && DB.products && DB.products.list) ? DB.products.list() : [];
+        return all
+          .filter(p => !!p.activo && Number(p.stock||0) > 0)
+          .sort((a,b)=> Number(b.id) - Number(a.id));
+      }catch{return [];}
+    }
+
+    function render(){
+      const data = getAll();
+      if(!data.length){
+        $grid.innerHTML = '';
+        $empty.style.display = 'block';
+        return;
+      }
+      $empty.style.display = 'none';
+      $grid.innerHTML = data.map(card).join('');
+    }
+
+    document.addEventListener('click', e=>{
+      const btn = e.target.closest('[data-add]');
+      if(!btn) return;
+      const card = btn.closest('.card.product');
+      if(!card) return;
+      addOne(card.getAttribute('data-id'));
+      btn.textContent = 'Agregado ✓';
+      setTimeout(()=> btn.textContent = 'Agregar', 900);
+    });
+
+    window.addEventListener('nx:products-seeded', render);
+    render();
+  })();
+  </script>
+</body>
+</html>

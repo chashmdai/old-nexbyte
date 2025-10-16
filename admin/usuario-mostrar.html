@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Ver usuario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main id="admin-main" class="a-main container">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a><span class="sep">/</span>
+        <a href="usuarios-listado.html">Usuarios</a><span class="sep">/</span>
+        <span class="muted">Ver</span>
+      </nav>
+
+      <h1>Usuario</h1>
+
+      <section id="notFound" class="card hidden">
+        <p class="error">No se encontró el usuario solicitado.</p>
+        <a class="btn" href="usuarios-listado.html">Volver al listado</a>
+      </section>
+
+      <section id="view" class="card hidden">
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+          <div>
+            <h2>Identificación</h2>
+            <div class="kv"><div class="k">RUN</div><div class="v" id="u-run">—</div></div>
+            <div class="kv"><div class="k">Nombre</div><div class="v" id="u-nombre">—</div></div>
+            <div class="kv"><div class="k">Apellidos</div><div class="v" id="u-apellidos">—</div></div>
+          </div>
+
+          <div>
+            <h2>Contacto</h2>
+            <div class="kv"><div class="k">Correo</div><div class="v" id="u-correo">—</div></div>
+            <div class="kv"><div class="k">Teléfono</div><div class="v" id="u-telefono">—</div></div>
+          </div>
+
+          <div>
+            <h2>Ubicación</h2>
+            <div class="kv"><div class="k">Región</div><div class="v" id="u-region">—</div></div>
+            <div class="kv"><div class="k">Comuna</div><div class="v" id="u-comuna">—</div></div>
+            <div class="kv"><div class="k">Dirección</div><div class="v" id="u-direccion">—</div></div>
+          </div>
+
+          <div>
+            <h2>Metadatos</h2>
+            <div class="kv"><div class="k">Creado</div><div class="v" id="u-creado">—</div></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <a id="btnEdit" class="btn primary" href="#">Editar</a>
+          <button id="btnDelete" class="btn danger" type="button">Eliminar</button>
+          <a class="btn" href="usuarios-listado.html">Volver</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+
+  <script src="../assets/js/usuarios.js"></script>
+  <script src="../assets/js/layout-admin.js"></script>
+  <script>
+    AX.mountLayout();
+
+    const qs=k=>new URLSearchParams(location.search).get(k);
+    const normRUN=s=>String(s||"").replace(/[.\-]/g,"").trim().toUpperCase();
+    function formatRun(run){
+      const m=String(run||"").toUpperCase().match(/^(\d+)([0-9K])$/);
+      if(!m) return run||"";
+      const body=m[1].replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+      return body+'-'+m[2];
+    }
+    const digitsOnly=s=>String(s||"").replace(/\D+/g,"");
+    function formatPhone(v){
+      const d=digitsOnly(v); if(!d) return "";
+      const t=d[0]==="9"?d:"9"+d;
+      const a=t.slice(0,1),b=t.slice(1,5),c=t.slice(5,9);
+      return [a,b,c].filter(Boolean).join(" ").trim();
+    }
+    function fmtDate(ts){
+      if(!ts) return "—";
+      try{ const d=new Date(Number(ts)); return d.toLocaleString(); }catch{ return "—"; }
+    }
+
+    function paint(user){
+      document.getElementById('view').classList.remove('hidden');
+      document.getElementById('u-run').textContent = formatRun(user.run||"");
+      document.getElementById('u-nombre').textContent = user.nombre||"—";
+      document.getElementById('u-apellidos').textContent = user.apellidos||"—";
+      document.getElementById('u-correo').textContent = user.correo||"—";
+      document.getElementById('u-telefono').textContent = user.telefono?formatPhone(user.telefono):"—";
+      document.getElementById('u-region').textContent = user.region||"—";
+      document.getElementById('u-comuna').textContent = user.comuna||"—";
+      document.getElementById('u-direccion').textContent = user.direccion||"—";
+      document.getElementById('u-creado').textContent = fmtDate(user.createdAt);
+
+      document.getElementById('btnEdit').setAttribute('href','usuario-editar.html?run='+encodeURIComponent(user.run));
+      document.getElementById('btnDelete').addEventListener('click',()=>{
+        if(confirm('¿Eliminar usuario RUN '+formatRun(user.run)+' ?')){
+          if(window.DB?.users?.remove && DB.users.remove(user.run)) location.href='usuarios-listado.html';
+          else alert('No se pudo eliminar.');
+        }
+      });
+    }
+    function notFound(){ document.getElementById('notFound').classList.remove('hidden'); }
+
+    function init(){
+      const runParam=normRUN(qs('run'));
+      if(!runParam){ notFound(); return; }
+      const user=window.DB?.users?.get ? DB.users.get(runParam) : null;
+      if(user==null){
+        if(!window.DB || !window.DB.users){ addEventListener('nx:users-seeded', init, {once:true}); return; }
+        notFound(); return;
+      }
+      paint(user);
+    }
+    init();
+  </script>
+</body>
+</html>

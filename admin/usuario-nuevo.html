@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Nuevo usuario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main id="admin-main" class="a-main container">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a><span class="sep">/</span>
+        <a href="usuarios-listado.html">Usuarios</a><span class="sep">/</span>
+        <span class="muted">Nuevo</span>
+      </nav>
+
+      <h1>Nuevo usuario</h1>
+      <p class="muted">Los campos marcados con * son obligatorios.</p>
+
+      <form id="frmUserNew" class="form" novalidate>
+        <div class="field">
+          <label for="run">RUN *</label>
+          <input id="run" class="input" type="text" inputmode="text" maxlength="9" placeholder="Ej: 19011022K" required autocomplete="off">
+          <div id="err-run" class="error"></div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div class="field">
+            <label for="nombre">Nombre *</label>
+            <input id="nombre" class="input" type="text" maxlength="100" required>
+            <div id="err-nombre" class="error"></div>
+          </div>
+
+          <div class="field">
+            <label for="apellidos">Apellidos *</label>
+            <input id="apellidos" class="input" type="text" maxlength="100" required>
+            <div id="err-apellidos" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div class="field">
+            <label for="correo">Correo *</label>
+            <input id="correo" class="input" type="email" maxlength="100" required>
+            <div class="help">Solo se permite @duoc.cl, @profesor.duoc.cl y @gmail.com</div>
+            <div id="err-correo" class="error"></div>
+          </div>
+
+          <div class="field">
+            <label for="telefono">Teléfono (opcional)</label>
+            <input id="telefono" class="input" type="text" inputmode="numeric" placeholder="9 XXXX XXXX" maxlength="11">
+            <div id="err-telefono" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div class="field">
+            <label for="pass">Contraseña *</label>
+            <input id="pass" class="input" type="password" minlength="4" maxlength="10" required>
+            <div id="err-pass" class="error"></div>
+          </div>
+
+          <div class="field">
+            <label for="pass2">Confirmar contraseña *</label>
+            <input id="pass2" class="input" type="password" minlength="4" maxlength="10" required>
+            <div id="err-pass2" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field">
+            <label for="region">Región *</label>
+            <select id="region" class="input" required></select>
+            <div id="err-region" class="error"></div>
+          </div>
+          <div class="field">
+            <label for="comuna">Comuna *</label>
+            <select id="comuna" class="input" required></select>
+            <div id="err-comuna" class="error"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="direccion">Dirección *</label>
+          <input id="direccion" class="input" type="text" maxlength="300" required>
+          <div id="err-direccion" class="error"></div>
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn primary" type="submit">Guardar</button>
+          <a class="btn" href="usuarios-listado.html">Cancelar</a>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+
+  <script src="../assets/js/usuarios.js"></script>
+  <script src="../assets/js/layout-admin.js"></script>
+  <script src="../assets/js/regiones.js"></script>
+  <script>
+    AX.mountLayout();
+
+    const ALLOWED_DOMAINS=/(duoc\.cl|profesor\.duoc\.cl|gmail\.com)$/i;
+
+    const normRUN=s=>String(s||"").replace(/[.\-]/g,"").trim().toUpperCase();
+    function isValidRUN(run){
+      const r=normRUN(run);
+      if(!/^\d{7,8}[0-9K]$/.test(r)) return false;
+      const body=r.slice(0,-1), dv=r.slice(-1);
+      let sum=0, mul=2;
+      for(let i=body.length-1;i>=0;i--){ sum+=parseInt(body[i],10)*mul; mul=mul===7?2:mul+1; }
+      const rest=11-(sum%11);
+      const dvCalc=rest===11?"0":rest===10?"K":String(rest);
+      return dv===dvCalc;
+    }
+    function isAllowedEmail(email){
+      if(!email||email.length>100) return false;
+      const m=email.trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)) return false;
+      return ALLOWED_DOMAINS.test(m);
+    }
+
+    const digitsOnly=s=>String(s||"").replace(/\D+/g,"");
+    function isPhoneOk(val){ const d=digitsOnly(val); return d.length===9 && d.startsWith("9"); }
+    function formatPhone(val){
+      const d=digitsOnly(val); if(!d) return "";
+      const t=d[0]==="9"?d:"9"+d;
+      const a=t.slice(0,1),b=t.slice(1,5),c=t.slice(5,9);
+      return [a,b,c].filter(Boolean).join(" ").trim();
+    }
+
+    function setErr(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||""; }
+    function clearErrs(){
+      ["err-run","err-nombre","err-apellidos","err-correo","err-telefono","err-pass","err-pass2","err-region","err-comuna","err-direccion"].forEach(k=>setErr(k,""));
+    }
+
+    // Regiones / comunas
+    (function mountRegions(){
+      const $region=document.getElementById("region");
+      const $comuna=document.getElementById("comuna");
+      const data=(window.RegionesYComunas||window.REGIONES||[]);
+      if(!$region||!$comuna||!Array.isArray(data)||!data.length) return;
+
+      $region.innerHTML=`<option value="">Seleccione…</option>`;
+      for(const reg of data){
+        const name=reg.NombreRegion||reg.region||reg.nombre||"";
+        if(!name) continue;
+        const opt=document.createElement("option"); opt.value=opt.textContent=name; $region.appendChild(opt);
+      }
+      function fillComunas(regName){
+        $comuna.innerHTML=`<option value="">Seleccione…</option>`;
+        const r=data.find(x=>(x.NombreRegion||x.region||x.nombre||"")===regName);
+        const comunas=r?(r.Comunas||r.comunas||r.items||[]):[];
+        for(const c of comunas){
+          const nm=c.NombreComuna||c.comuna||c.nombre||c;
+          const opt=document.createElement("option"); opt.value=opt.textContent=nm; $comuna.appendChild(opt);
+        }
+      }
+      $region.addEventListener("change",()=>fillComunas($region.value));
+      fillComunas("");
+    })();
+
+    // Normalización en vivo
+    const $run=document.getElementById("run");
+    const $tel=document.getElementById("telefono");
+    $run.addEventListener("input",()=>{ $run.value=normRUN($run.value).replace(/[^0-9K]/g,"").slice(0,9); });
+    $tel.addEventListener("input",()=>{ $tel.value=formatPhone($tel.value).slice(0,11); });
+
+    // Helpers de existencia con fallbacks
+    function usersList(){
+      try{ return window.DB?.users?.list ? DB.users.list() : []; }catch{ return []; }
+    }
+    function existsByRun(run){
+      try{
+        if(window.DB?.users?.existsByRun) return DB.users.existsByRun(run);
+        if(window.DB?.users?.get) return !!DB.users.get(run);
+        return usersList().some(u=>normRUN(u.run)===run);
+      }catch{ return false; }
+    }
+    function existsByCorreo(correo){
+      try{
+        if(window.DB?.users?.existsByCorreo) return DB.users.existsByCorreo(correo);
+        return usersList().some(u=>(u.correo||"").toLowerCase()===correo.toLowerCase());
+      }catch{ return false; }
+    }
+
+    document.getElementById("frmUserNew").addEventListener("submit",e=>{
+      e.preventDefault(); clearErrs();
+
+      const run=normRUN(document.getElementById("run").value);
+      const nombre=document.getElementById("nombre").value.trim();
+      const apellidos=document.getElementById("apellidos").value.trim();
+      const correo=document.getElementById("correo").value.trim().toLowerCase();
+      const telefonoFmt=formatPhone(document.getElementById("telefono").value);
+      const pass=document.getElementById("pass").value;
+      const pass2=document.getElementById("pass2").value;
+      const region=document.getElementById("region").value.trim();
+      const comuna=document.getElementById("comuna").value.trim();
+      const direccion=document.getElementById("direccion").value.trim();
+
+      let ok=true;
+      if(!isValidRUN(run)){ setErr("err-run","RUN inválido."); ok=false; }
+      if(nombre.length<2||nombre.length>100){ setErr("err-nombre","Entre 2 y 100 caracteres."); ok=false; }
+      if(apellidos.length<2||apellidos.length>100){ setErr("err-apellidos","Entre 2 y 100 caracteres."); ok=false; }
+      if(!isAllowedEmail(correo)){ setErr("err-correo","Correo inválido o dominio no permitido."); ok=false; }
+      if(telefonoFmt && !isPhoneOk(telefonoFmt)){ setErr("err-telefono","Formato: 9 XXXX XXXX."); ok=false; }
+      if(pass.length<4||pass.length>10){ setErr("err-pass","Entre 4 y 10 caracteres."); ok=false; }
+      if(pass!==pass2){ setErr("err-pass2","Las contraseñas no coinciden."); ok=false; }
+      if(!region){ setErr("err-region","Selecciona una región."); ok=false; }
+      if(!comuna){ setErr("err-comuna","Selecciona una comuna."); ok=false; }
+      if(direccion.length<3){ setErr("err-direccion","Dirección demasiado corta."); ok=false; }
+
+      if(existsByRun(run)){ setErr("err-run","Este RUN ya está registrado."); ok=false; }
+      if(existsByCorreo(correo)){ setErr("err-correo","Este correo ya está registrado."); ok=false; }
+      if(!ok) return;
+
+      const okAdd = window.DB?.users?.add ? DB.users.add({ run,nombre,apellidos,correo,pass,telefono:telefonoFmt,region,comuna,direccion }) : false;
+      if(!okAdd){ setErr("err-run","No se pudo crear: RUN/correo en uso."); return; }
+      location.href="usuarios-listado.html";
+    });
+
+    // Si la DB se carga tarde
+    if(!window.DB || !window.DB.users){
+      addEventListener('nx:users-seeded',()=>{/* nada que recalcular aquí en el alta */},{once:true});
+    }
+  </script>
+</body>
+</html>

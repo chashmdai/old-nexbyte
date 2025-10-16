@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Inventario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+  <style>
+    .stickybar{position:sticky;top:8px;z-index:5;background:var(--ad-surface-2);border:1px solid var(--ad-border);border-radius:var(--ad-radius);padding:10px;box-shadow:var(--ad-shadow);margin:8px 0 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .stickybar .search{flex:1 1 320px;display:flex;gap:8px}
+    .stickybar .search input{width:100%}
+    .stickybar .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .stickybar .filters select{min-width:150px}
+    .stickybar .filters .short{min-width:120px}
+    #bulkBar{display:none;align-items:center;gap:10px;margin:8px 0 0;background:var(--ad-surface-2);border:1px solid var(--ad-border);border-radius:var(--ad-radius);padding:10px}
+    #bulkBar.show{display:flex}
+    .thumb-md{width:64px;height:64px;border:1px solid var(--ad-border);border-radius:8px;background:#0c1422 center/cover no-repeat;display:inline-block}
+    .img-pop{position:fixed;z-index:60;pointer-events:none;width:240px;height:160px;border-radius:12px;border:1px solid var(--ad-border);box-shadow:var(--ad-shadow);background:#0c1422 center/cover no-repeat;display:none}
+    .col-sel{width:42px}
+    @media(max-width:1000px){th[data-col="cat"],td[data-col="cat"]{display:none}}
+    #tabla th,#tabla td{text-align:center;vertical-align:middle}
+    #tabla th.right,#tabla td.right{text-align:right}
+    #tabla th:nth-child(3),#tabla td:nth-child(3){text-align:left}
+    #tabla td:nth-child(2) .thumb-md,#tabla td:nth-child(2) img,#tabla td:nth-child(2)>*{display:block;margin-inline:auto}
+    #tabla td:nth-child(6) .qty{justify-content:center}
+    #tabla td:nth-child(6) .qty input{text-align:center;width:72px}
+    #tabla td:last-child .btn{margin-inline:2px}
+  </style>
+</head>
+<body class="admin">
+<header id="admin-header"></header>
+
+<div class="a-layout">
+  <aside id="admin-aside" class="a-aside"></aside>
+
+  <main id="admin-main" class="a-main container">
+    <nav class="breadcrumb">
+      <a href="index.html">Dashboard</a><span class="sep">/</span><span class="muted">Inventario</span>
+    </nav>
+
+    <h1>Inventario</h1>
+
+    <div class="stickybar" id="toolbar">
+      <div class="search">
+        <input id="q" class="input" type="text" placeholder="Buscar por id, nombre o categoría…" aria-label="Buscar">
+      </div>
+
+      <div class="filters">
+        <select id="fCat" aria-label="Filtrar por categoría"><option value="">Todas las categorías</option></select>
+        <select id="fEstado" class="short" aria-label="Filtrar por estado">
+          <option value="">Todos</option><option value="1">Activos</option><option value="0">Inactivos</option>
+        </select>
+        <select id="fStock" class="short" aria-label="Filtrar por stock">
+          <option value="">Todos</option><option value="low">Bajo stock (&lt; 5)</option><option value="zero">Sin stock</option><option value="noimg">Sin imagen</option>
+        </select>
+        <select id="fSort" aria-label="Ordenar">
+          <option value="none">Ordenar…</option>
+          <option value="stock-desc">Stock ↓</option><option value="stock-asc">Stock ↑</option>
+          <option value="precio-desc">Precio ↓</option><option value="precio-asc">Precio ↑</option>
+          <option value="nombre-asc">Nombre A–Z</option><option value="nombre-desc">Nombre Z–A</option>
+        </select>
+      </div>
+
+      <span class="spacer"></span>
+      <button id="btnExport" class="btn">Exportar CSV</button>
+      <a class="btn primary" href="producto-nuevo.html">Nuevo producto</a>
+    </div>
+
+    <div id="bulkBar">
+      <div class="muted" id="bulkCount">0 seleccionados</div>
+      <span class="spacer"></span>
+      <button class="btn" id="bulkInc">+1</button>
+      <button class="btn" id="bulkDec">-1</button>
+      <label class="muted">Fijar:
+        <input id="bulkSetVal" class="input" type="number" min="0" step="1" style="width:90px">
+      </label>
+      <button class="btn" id="bulkSet">Aplicar</button>
+      <button class="btn" id="bulkOn">Activar</button>
+      <button class="btn" id="bulkOff">Desactivar</button>
+      <button class="btn danger" id="bulkDel">Eliminar</button>
+      <button class="btn" id="bulkExport">Exportar selección</button>
+    </div>
+
+    <div id="empty" class="card hidden">
+      <p class="muted">No hay productos que coincidan.</p>
+      <a class="btn" href="productos-listado.html">Ver listado</a>
+    </div>
+
+    <div id="wrap" class="table-wrap hidden">
+      <table class="table-sm" id="tabla">
+        <thead>
+          <tr>
+            <th class="col-sel"><input type="checkbox" id="selAll" aria-label="Seleccionar todos"></th>
+            <th style="width:84px">Img</th>
+            <th>Producto</th>
+            <th style="width:160px" data-col="cat">Categoría</th>
+            <th style="width:120px">Precio</th>
+            <th style="width:220px">Stock</th>
+            <th style="width:100px">Activo</th>
+            <th class="right" style="width:260px">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="a-dim" aria-hidden="true"></div>
+<div id="imgPop" class="img-pop" aria-hidden="true"></div>
+
+<script src="../assets/js/datos.js"></script>
+<script src="../assets/js/layout-admin.js"></script>
+<script>
+  AX.mountLayout();
+
+  const LOW=5;
+  const CLP=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+  const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
+
+  const $q=$('#q'),$fCat=$('#fCat'),$fEstado=$('#fEstado'),$fStock=$('#fStock'),$fSort=$('#fSort');
+  const $tbody=$('#tbody'),$wrap=$('#wrap'),$empty=$('#empty'),$selAll=$('#selAll'),$imgPop=$('#imgPop');
+  const $bulk=$('#bulkBar'),$bulkCount=$('#bulkCount'),$bulkInc=$('#bulkInc'),$bulkDec=$('#bulkDec'),$bulkSetVal=$('#bulkSetVal'),$bulkSet=$('#bulkSet'),$bulkOn=$('#bulkOn'),$bulkOff=$('#bulkOff'),$bulkDel=$('#bulkDel'),$bulkExp=$('#bulkExport');
+  const $btnExport=$('#btnExport');
+
+  const selected=new Set();
+
+  const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const getAll=()=>{try{return(DB&&DB.products&&DB.products.list)?DB.products.list():[]}catch{return[]}};
+
+  function fillCategories(){
+    const set=new Set(); getAll().forEach(p=>{if(p.categoria)set.add(p.categoria)});
+    const keep=$fCat.value;
+    $fCat.innerHTML='<option value="">Todas las categorías</option>'+Array.from(set).sort().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if(Array.from(set).includes(keep))$fCat.value=keep;
+  }
+
+  function chipStock(p){
+    const st=Number(p.stock||0);
+    if(st<=0)return'<span class="badge warn">0</span>';
+    if(st<LOW)return'<span class="badge" style="background:#fff7ed;border-color:#fed7aa;color:#c2410c">'+st+'</span>';
+    return'<span class="badge ok">'+st+'</span>';
+  }
+
+  function thumbHtml(p){
+    if(p&&p.imagen){
+      const url=escapeHtml(p.imagen);
+      const bg=`background-image:url('${url.replace(/'/g,"\\'")}')`;
+      return `<div class="thumb-md" data-img="${url}" style="${bg}" title="Ver imagen"></div>`;
+    }
+    return `<div class="thumb-md" title="Sin imagen"></div>`;
+  }
+  function showImgPop(src,x,y){
+    if(!src)return;
+    const w=240,h=160,px=Math.min(window.innerWidth-w-12,x+16),py=Math.min(window.innerHeight-h-12,y+16);
+    $imgPop.style.backgroundImage=`url("${src.replace(/"/g,'&quot;')}")`;
+    $imgPop.style.left=px+'px'; $imgPop.style.top=py+'px'; $imgPop.style.display='block';
+  }
+  const hideImgPop=()=>{$imgPop.style.display='none'};
+
+  function qtyCtrl(id,stock){
+    const s=Number(stock||0);
+    return `
+      <div class="qty" data-qty="${id}">
+        <button class="qty-btn" data-dec>-</button>
+        <input class="qty-in" type="number" value="${s}" min="0" step="1" style="width:70px">
+        <button class="qty-btn" data-inc>+</button>
+        <button class="btn small" data-save>Guardar</button>
+      </div>`;
+  }
+  const activoBtn=(id,on)=>`<button class="btn small ${on?'subtle':''}" data-toggle="${id}" aria-pressed="${on?'true':'false'}">${on?'Sí':'No'}</button>`;
+
+  function row(p){
+    const id=String(p.id),editar=`producto-editar.html?id=${encodeURIComponent(id)}`,ver=`producto-mostrar.html?id=${encodeURIComponent(id)}`;
+    return `
+      <tr data-id="${id}">
+        <td class="col-sel"><input type="checkbox" class="row-sel" data-id="${id}"></td>
+        <td>${thumbHtml(p)}</td>
+        <td>
+          <a href="${ver}" style="font-weight:700;text-decoration:none">${escapeHtml(p.nombre||'')}</a>
+          <div class="muted" style="font-size:.9rem">#${escapeHtml(id)}</div>
+        </td>
+        <td data-col="cat">${escapeHtml(p.categoria||'—')}</td>
+        <td>${CLP.format(Number(p.precio||0))}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${chipStock(p)} ${qtyCtrl(id,p.stock)}
+          </div>
+        </td>
+        <td>${activoBtn(id,!!p.activo)}</td>
+        <td class="right">
+          <a class="btn" href="${editar}">Editar</a>
+          <a class="btn" href="${ver}">Ver</a>
+          <button class="btn danger" data-del>Eliminar</button>
+        </td>
+      </tr>`;
+  }
+
+  function applyFilters(list){
+    const txt=$q.value.toLowerCase().trim(),cat=$fCat.value.trim(),est=$fEstado.value,stk=$fStock.value;
+    let data=list.filter(p=>{
+      if(txt){const blob=[String(p.id||''),p.nombre||'',p.categoria||''].join(' ').toLowerCase(); if(!blob.includes(txt))return false}
+      if(cat&&String(p.categoria||'')!==cat)return false;
+      if(est!==''&&String(p.activo?1:0)!==est)return false;
+      if(stk==='low' && !(Number(p.stock||0)>0&&Number(p.stock)<5))return false;
+      if(stk==='zero'&& !(Number(p.stock||0)===0))return false;
+      if(stk==='noimg'&& !!p.imagen)return false;
+      return true;
+    });
+    switch($fSort.value){
+      case 'stock-desc': data.sort((a,b)=>Number(b.stock||0)-Number(a.stock||0)); break;
+      case 'stock-asc':  data.sort((a,b)=>Number(a.stock||0)-Number(b.stock||0)); break;
+      case 'precio-desc':data.sort((a,b)=>Number(b.precio||0)-Number(a.precio||0)); break;
+      case 'precio-asc': data.sort((a,b)=>Number(a.precio||0)-Number(b.precio||0)); break;
+      case 'nombre-asc': data.sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''))); break;
+      case 'nombre-desc':data.sort((a,b)=>String(b.nombre||'').localeCompare(String(a.nombre||''))); break;
+    }
+    return data;
+  }
+
+  function updBulkBar(){
+    const n=selected.size, rows=$$('.row-sel');
+    $bulkCount.textContent=n+' seleccionados';
+    $bulk.classList.toggle('show',n>0);
+    $selAll.checked=n>0&&n===rows.length;
+    $selAll.indeterminate=n>0&&n<rows.length;
+  }
+
+  function render(){
+    fillCategories();
+    const data=applyFilters(getAll()),has=data.length>0;
+    $empty.classList.toggle('hidden',has); $wrap.classList.toggle('hidden',!has);
+    selected.clear(); updBulkBar();
+    if(!has){$tbody.innerHTML='';return}
+    let html=''; for(let i=0;i<data.length;i++) html+=row(data[i]); $tbody.innerHTML=html;
+    $$('.thumb-md').forEach(el=>{
+      const src=el.getAttribute('data-img')||'';
+      el.addEventListener('mouseenter',e=>showImgPop(src,e.clientX,e.clientY));
+      el.addEventListener('mousemove',e=>showImgPop(src,e.clientX,e.clientY));
+      el.addEventListener('mouseleave',hideImgPop);
+    });
+  }
+
+  $q.addEventListener('input',render);
+  $fCat.addEventListener('change',render);
+  $fEstado.addEventListener('change',render);
+  $fStock.addEventListener('change',render);
+  $fSort.addEventListener('change',render);
+
+  $selAll.addEventListener('change',()=>{
+    const on=$selAll.checked;
+    $$('.row-sel').forEach(chk=>{chk.checked=on;const id=chk.getAttribute('data-id'); on?selected.add(id):selected.delete(id)});
+    updBulkBar();
+  });
+
+  document.addEventListener('click',e=>{
+    const tr=e.target.closest('tr[data-id]');
+    if(e.target.closest('.row-sel')){
+      const chk=e.target.closest('.row-sel'),id=chk.getAttribute('data-id');
+      chk.checked?selected.add(id):selected.delete(id); updBulkBar(); return;
+    }
+    if(!tr)return;
+    const id=tr.getAttribute('data-id'),p=DB.products.get(id); if(!p)return;
+
+    const qty=e.target.closest('[data-qty]');
+    if(qty){
+      const $in=qty.querySelector('.qty-in');
+      if(e.target.matches('[data-dec]'))$in.value=Math.max(0,(+$in.value||0)-1);
+      if(e.target.matches('[data-inc]'))$in.value=(+$in.value||0)+1;
+      if(e.target.matches('[data-save]')){
+        const nv=Math.max(0,parseInt($in.value,10)||0);
+        try{DB?.products?.update&&DB.products.update(id,{stock:nv})}catch{}
+        $in.value=nv; render();
+      }
+      return;
+    }
+
+    const tgl=e.target.closest('[data-toggle]');
+    if(tgl){const isOn=tgl.getAttribute('aria-pressed')==='true',next=!isOn; try{DB?.products?.update&&DB.products.update(id,{activo:next})}catch{} render(); return;}
+
+    if(e.target.closest('[data-del]')){
+      if(!confirm(`¿Eliminar "${p.nombre||''}" (#${id})?`))return;
+      try{DB?.products?.remove&&DB.products.remove(id)}catch{} render(); return;
+    }
+  });
+
+  document.addEventListener('keydown',e=>{
+    const inQty=e.target.closest('.qty-in'); if(!inQty)return;
+    if(e.key==='+'){inQty.value=(+inQty.value||0)+(e.shiftKey?5:1); e.preventDefault()}
+    if(e.key==='-'){inQty.value=Math.max(0,(+inQty.value||0)-(e.shiftKey?5:1)); e.preventDefault()}
+    if(e.key==='Enter'){
+      const wrap=e.target.closest('[data-qty]'),id=wrap?.getAttribute('data-qty'); if(!id)return;
+      const nv=Math.max(0,parseInt(inQty.value,10)||0);
+      try{DB?.products?.update&&DB.products.update(id,{stock:nv})}catch{} render();
+    }
+  });
+
+  const idsSel=()=>Array.from(selected);
+  const bulkApply=fn=>{idsSel().forEach(id=>{try{fn(id)}catch{}});render()};
+  $bulkInc.addEventListener('click',()=>bulkApply(id=>{const p=DB.products.get(id);DB.products.update(id,{stock:(Number(p?.stock||0))+1})}));
+  $bulkDec.addEventListener('click',()=>bulkApply(id=>{const p=DB.products.get(id);DB.products.update(id,{stock:Math.max(0,(Number(p?.stock||0))-1)})}));
+  $bulkSet.addEventListener('click',()=>{const n=Math.max(0,parseInt($bulkSetVal.value,10)||0);bulkApply(id=>DB.products.update(id,{stock:n}))});
+  $bulkOn .addEventListener('click',()=>bulkApply(id=>DB.products.update(id,{activo:true})));
+  $bulkOff.addEventListener('click',()=>bulkApply(id=>DB.products.update(id,{activo:false})));
+  $bulkDel.addEventListener('click',()=>{const n=selected.size;if(!n)return; if(!confirm('¿Eliminar '+n+' producto(s) seleccionados?'))return; bulkApply(id=>DB.products.remove(id))});
+
+  function toCSV(rows){
+    const head=['id','nombre','categoria','precio','stock','activo','imagen'];
+    const needs=v=>/[",\n]/.test(String(v)); const esc=v=>String(v??'').replace(/"/g,'""'); const wrap=v=>needs(v)?`"${esc(v)}"`:String(v??'');
+    const body=rows.map(p=>head.map(k=>wrap(p[k])).join(',')).join('\n');
+    return head.join(',')+'\n'+body;
+  }
+  function download(name,text){
+    const blob=new Blob([text],{type:'text/csv;charset=utf-8;'}),a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+  }
+
+  $btnExport.addEventListener('click',()=>{const data=applyFilters(getAll()); if(!data.length)return; download('inventario.csv',toCSV(data))});
+  $bulkExp  .addEventListener('click',()=>{const ids=idsSel(); if(!ids.length)return; const data=getAll().filter(p=>ids.includes(String(p.id))); download('inventario-seleccion.csv',toCSV(data))});
+
+  addEventListener('nx:products-seeded',render);
+  render();
+</script>
+</body>
+</html>

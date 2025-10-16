@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Editar usuario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main id="admin-main" class="a-main container">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a><span class="sep">/</span>
+        <a href="usuarios-listado.html">Usuarios</a><span class="sep">/</span>
+        <span class="muted">Editar</span>
+      </nav>
+
+      <h1>Editar usuario</h1>
+      <p class="muted">El RUN no puede modificarse. La contraseña es opcional: solo se cambia si la escribes.</p>
+
+      <div id="notFound" class="card hidden">
+        <p class="error">No se encontró el usuario solicitado.</p>
+        <a class="btn" href="usuarios-listado.html">Volver al listado</a>
+      </div>
+
+      <form id="frmUserEdit" class="form hidden" novalidate>
+        <div class="field">
+          <label for="run">RUN</label>
+          <input id="run" class="input" type="text" disabled>
+          <div class="help">No editable.</div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div class="field">
+            <label for="nombre">Nombre *</label>
+            <input id="nombre" class="input" type="text" maxlength="100" required>
+            <div id="err-nombre" class="error"></div>
+          </div>
+
+          <div class="field">
+            <label for="apellidos">Apellidos *</label>
+            <input id="apellidos" class="input" type="text" maxlength="100" required>
+            <div id="err-apellidos" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div class="field">
+            <label for="correo">Correo *</label>
+            <input id="correo" class="input" type="email" maxlength="100" required>
+            <div class="help">Solo @duoc.cl, @profesor.duoc.cl o @gmail.com</div>
+            <div id="err-correo" class="error"></div>
+          </div>
+
+          <div class="field">
+            <label for="telefono">Teléfono (opcional)</label>
+            <input id="telefono" class="input" type="text" inputmode="numeric" placeholder="9 XXXX XXXX" maxlength="11">
+            <div id="err-telefono" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div class="field">
+            <label for="pass">Contraseña (opcional)</label>
+            <input id="pass" class="input" type="password" minlength="4" maxlength="10" placeholder="Dejar en blanco para mantener">
+            <div id="err-pass" class="error"></div>
+          </div>
+
+          <div class="field">
+            <label for="pass2">Confirmar contraseña</label>
+            <input id="pass2" class="input" type="password" minlength="4" maxlength="10" placeholder="Debe coincidir si cambias">
+            <div id="err-pass2" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field">
+            <label for="region">Región *</label>
+            <select id="region" class="input" required></select>
+            <div id="err-region" class="error"></div>
+          </div>
+          <div class="field">
+            <label for="comuna">Comuna *</label>
+            <select id="comuna" class="input" required></select>
+            <div id="err-comuna" class="error"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="direccion">Dirección *</label>
+          <input id="direccion" class="input" type="text" maxlength="300" required>
+          <div id="err-direccion" class="error"></div>
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn primary" type="submit">Guardar cambios</button>
+          <a class="btn" href="usuarios-listado.html">Cancelar</a>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+
+  <script src="../assets/js/usuarios.js"></script>
+  <script src="../assets/js/layout-admin.js"></script>
+  <script src="../assets/js/regiones.js"></script>
+  <script>
+    AX.mountLayout();
+
+    const ALLOWED_DOMAINS=/(duoc\.cl|profesor\.duoc\.cl|gmail\.com)$/i;
+    const qs=k=>new URLSearchParams(location.search).get(k);
+    const normRUN=s=>String(s||"").replace(/[.\-]/g,"").trim().toUpperCase();
+
+    function isAllowedEmail(email){
+      if(!email||email.length>100) return false;
+      const m=email.trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)) return false;
+      return ALLOWED_DOMAINS.test(m);
+    }
+    const digitsOnly=s=>String(s||"").replace(/\D+/g,"");
+    function isPhoneOk(v){ const d=digitsOnly(v); return d.length===9 && d.startsWith("9"); }
+    function formatPhone(v){
+      const d=digitsOnly(v); if(!d) return "";
+      const t=d[0]==="9"?d:"9"+d;
+      const a=t.slice(0,1), b=t.slice(1,5), c=t.slice(5,9);
+      return [a,b,c].filter(Boolean).join(" ").trim();
+    }
+    function setErr(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||""; }
+    function clearErrs(){ ["err-nombre","err-apellidos","err-correo","err-telefono","err-pass","err-pass2","err-region","err-comuna","err-direccion"].forEach(k=>setErr(k,"")); }
+
+    const $region=document.getElementById("region");
+    const $comuna=document.getElementById("comuna");
+    const RDATA=(window.RegionesYComunas||window.REGIONES||[]);
+
+    function mountRegions(){
+      if(!$region||!$comuna||!Array.isArray(RDATA)||!RDATA.length) return;
+      $region.innerHTML='<option value="">Seleccione…</option>';
+      for(const reg of RDATA){
+        const name=reg.NombreRegion||reg.region||reg.nombre||"";
+        if(!name) continue;
+        const opt=document.createElement("option"); opt.value=opt.textContent=name; $region.appendChild(opt);
+      }
+      $region.addEventListener("change",()=>fillComunas($region.value));
+      fillComunas("");
+    }
+    function fillComunas(regName){
+      $comuna.innerHTML='<option value="">Seleccione…</option>';
+      const r=RDATA.find(x=>(x.NombreRegion||x.region||x.nombre||"")===regName);
+      const comunas=r?(r.Comunas||r.comunas||r.items||[]):[];
+      for(const c of comunas){
+        const nm=c.NombreComuna||c.comuna||c.nombre||c;
+        const opt=document.createElement("option"); opt.value=opt.textContent=nm; $comuna.appendChild(opt);
+      }
+    }
+
+    function paint(user){
+      mountRegions();
+      document.getElementById('frmUserEdit').classList.remove('hidden');
+      document.getElementById('run').value=user.run||'';
+      document.getElementById('nombre').value=user.nombre||'';
+      document.getElementById('apellidos').value=user.apellidos||'';
+      document.getElementById('correo').value=user.correo||'';
+      document.getElementById('telefono').value=user.telefono?formatPhone(user.telefono):'';
+      document.getElementById('direccion').value=user.direccion||'';
+
+      if(user.region){ $region.value=user.region; fillComunas(user.region); } else { fillComunas(""); }
+      if(user.comuna){ $comuna.value=user.comuna; }
+
+      document.getElementById('telefono').addEventListener('input',e=>{
+        e.target.value=formatPhone(e.target.value).slice(0,11);
+      });
+    }
+
+    function notFound(){ document.getElementById('notFound').classList.remove('hidden'); }
+
+    function init(){
+      const runParam=normRUN(qs('run'));
+      if(!runParam){ notFound(); return; }
+      const user = window.DB?.users?.get ? DB.users.get(runParam) : null;
+      if(user==null){
+        if(!window.DB || !window.DB.users){ addEventListener('nx:users-seeded', init, {once:true}); return; }
+        notFound(); return;
+      }
+      paint(user);
+    }
+    init();
+
+    document.getElementById('frmUserEdit').addEventListener('submit', e=>{
+      e.preventDefault(); clearErrs();
+
+      const nombre=document.getElementById('nombre').value.trim();
+      const apellidos=document.getElementById('apellidos').value.trim();
+      const correo=document.getElementById('correo').value.trim().toLowerCase();
+      const telefonoFmt=formatPhone(document.getElementById('telefono').value);
+      const pass=document.getElementById('pass').value;
+      const pass2=document.getElementById('pass2').value;
+      const region=$region.value.trim();
+      const comuna=$comuna.value.trim();
+      const direccion=document.getElementById('direccion').value.trim();
+
+      let ok=true;
+      if(nombre.length<2||nombre.length>100){ setErr('err-nombre','Entre 2 y 100 caracteres.'); ok=false; }
+      if(apellidos.length<2||apellidos.length>100){ setErr('err-apellidos','Entre 2 y 100 caracteres.'); ok=false; }
+      if(!isAllowedEmail(correo)){ setErr('err-correo','Correo inválido o dominio no permitido.'); ok=false; }
+      if(telefonoFmt && !isPhoneOk(telefonoFmt)){ setErr('err-telefono','Formato: 9 XXXX XXXX.'); ok=false; }
+      if((pass||pass2) && (pass.length<4||pass.length>10)){ setErr('err-pass','Entre 4 y 10 caracteres.'); ok=false; }
+      if((pass||pass2) && pass!==pass2){ setErr('err-pass2','Las contraseñas no coinciden.'); ok=false; }
+      if(!region){ setErr('err-region','Selecciona una región.'); ok=false; }
+      if(!comuna){ setErr('err-comuna','Selecciona una comuna.'); ok=false; }
+      if(direccion.length<3){ setErr('err-direccion','Dirección demasiado corta.'); ok=false; }
+
+      if(!ok) return;
+
+      const runParam=normRUN(qs('run'));
+      const patch={ nombre, apellidos, correo, telefono:telefonoFmt, region, comuna, direccion };
+      if(pass) patch.pass=pass;
+
+      const saved=window.DB?.users?.update ? DB.users.update(runParam, patch) : false;
+      if(!saved){ setErr('err-correo','Este correo ya está registrado por otro usuario.'); return; }
+      location.href='usuarios-listado.html';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main class="a-main">
+      <div class="container">
+
+        <nav class="breadcrumb">
+          <a href="index.html">Dashboard</a>
+          <span class="sep">/</span>
+          <span class="muted">Inicio</span>
+        </nav>
+
+        <h1>Panel general</h1>
+        <p class="muted">Resumen operativo del día y accesos a los módulos clave.</p>
+
+        <div class="grid auto-240">
+          <div class="card kpi">
+            <div class="kpi-head">
+              <span class="kpi-title muted">Ventas hoy</span>
+              <span class="badge">demo</span>
+            </div>
+            <div class="kpi-value">$13.597.392</div>
+            <div class="kpi-bar" aria-hidden="true"><i style="--val:58%"></i></div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-head">
+              <span class="kpi-title muted">Pedidos pendientes</span>
+              <span class="badge">demo</span>
+            </div>
+            <div class="kpi-value">6</div>
+            <div class="kpi-bar" aria-hidden="true"><i style="--val:10%"></i></div>
+          </div>
+
+          <div class="card kpi">
+            <div class="kpi-head">
+              <span class="kpi-title muted">Productos activos</span>
+              <span class="badge">demo</span>
+            </div>
+            <div class="kpi-value">50</div>
+            <div class="kpi-bar" aria-hidden="true"><i style="--val:30%"></i></div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid" style="grid-template-columns:minmax(0,1fr) 360px">
+          <section class="card">
+            <h2>Accesos rápidos</h2>
+            <div class="grid auto-240 gap-12">
+              <div class="appcard">
+                <div class="title">Productos</div>
+                <div class="muted">Gestión de catálogo y altas.</div>
+                <div class="actions">
+                  <a class="btn" href="productos-listado.html">Listado</a>
+                  <a class="btn" href="producto-nuevo.html">Nuevo</a>
+                </div>
+              </div>
+
+              <div class="appcard">
+                <div class="title">Usuarios</div>
+                <div class="muted">Cuentas de clientes.</div>
+                <div class="actions">
+                  <a class="btn" href="usuarios-listado.html">Listado</a>
+                  <a class="btn" href="usuario-nuevo.html">Nuevo</a>
+                </div>
+              </div>
+
+              <div class="appcard">
+                <div class="title">Inventario</div>
+                <div class="muted">Stock, activo e importación/exportación.</div>
+                <div class="actions">
+                  <a class="btn" href="inventario.html">Abrir</a>
+                </div>
+              </div>
+
+              <div class="appcard">
+                <div class="title">Reportes</div>
+                <div class="muted">KPIs y categorías.</div>
+                <div class="actions">
+                  <a class="btn" href="reportes.html">Ver</a>
+                </div>
+              </div>
+
+              <div class="appcard">
+                <div class="title">Contactos</div>
+                <div class="muted">Mensajes del formulario.</div>
+                <div class="actions">
+                  <a class="btn" href="contactos.html">Abrir</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="card">
+            <h2>Actividad reciente</h2>
+            <div class="list">
+              <div class="item">
+                <div>
+                  <div class="title" style="font-weight:600">Exportación de inventario</div>
+                  <div class="muted" style="font-size:.92rem">CSV generado (demo)</div>
+                </div>
+                <div class="muted">10:15</div>
+              </div>
+              <div class="item">
+                <div>
+                  <div class="title" style="font-weight:600">Nuevo usuario</div>
+                  <div class="muted" style="font-size:.92rem">demo@correo.com</div>
+                </div>
+                <div class="muted">09:48</div>
+              </div>
+              <div class="item">
+                <div>
+                  <div class="title" style="font-weight:600">Alta de producto</div>
+                  <div class="muted" style="font-size:.92rem">Teclado mecánico TKL</div>
+                </div>
+                <div class="muted">09:20</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="hr"></div>
+
+        <section class="card">
+          <div class="toolbar">
+            <h2>Inventario — stock bajo</h2>
+            <span class="spacer"></span>
+            <a class="btn small" href="inventario.html">Ver inventario</a>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#2</td>
+                <td>Audífonos over-ear</td>
+                <td>Audio</td>
+                <td>$29.990</td>
+                <td><span class="badge warn">8</span></td>
+              </tr>
+              <tr>
+                <td>#1</td>
+                <td>Teclado mecánico TKL</td>
+                <td>Teclados</td>
+                <td>$39.990</td>
+                <td><span class="badge warn">12</span></td>
+              </tr>
+              <tr>
+                <td>#3</td>
+                <td>Mouse inalámbrico</td>
+                <td>Mouse</td>
+                <td>$19.990</td>
+                <td><span class="badge warn">15</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+  <script src="../assets/js/layout-admin.js"></script>
+  <script>AX.mountLayout();</script>
+</body>
+</html>

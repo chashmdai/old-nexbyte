@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Contactos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main class="a-main">
+      <div class="container">
+        <nav class="breadcrumb">
+          <a href="index.html">Dashboard</a><span class="sep">/</span><span class="muted">Contactos</span>
+        </nav>
+
+        <h1>Contactos</h1>
+        <p class="muted" style="margin-top:-6px">Mensajes enviados desde el formulario de contacto de la tienda.</p>
+
+        <div class="card toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div class="input-icon" style="flex:1 1 320px;max-width:680px">
+            <i>🔎</i>
+            <input id="q" class="input" type="text" placeholder="Buscar por nombre, correo o texto…" aria-label="Buscar">
+          </div>
+          <span class="spacer"></span>
+          <button id="btnExport" class="btn">Exportar CSV</button>
+          <button id="btnClear" class="btn danger">Vaciar todo</button>
+        </div>
+
+        <section id="empty" class="card hidden">
+          <p class="muted">Aún no hay mensajes.</p>
+        </section>
+
+        <div id="listWrap" class="table-wrap card">
+          <table class="table-sm">
+            <thead>
+              <tr>
+                <th style="width:110px">Fecha</th>
+                <th style="width:200px">Nombre</th>
+                <th style="width:220px">Correo</th>
+                <th>Mensaje</th>
+                <th class="right" style="width:140px">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <section id="viewer" class="card hidden" style="margin-top:12px">
+          <h2 style="margin-top:0">Mensaje</h2>
+          <div id="vMeta" class="muted">—</div>
+          <pre id="vText" style="white-space:pre-wrap;margin-top:8px">—</pre>
+          <div class="toolbar" style="justify-content:flex-end;margin-top:12px">
+            <button id="vClose" class="btn">Cerrar</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+
+  <script src="../assets/js/layout-admin.js"></script>
+  <script>AX.mountLayout();</script>
+  <script src="../assets/js/mensajes.js"></script>
+  <script src="../assets/js/contactos-admin.js"></script>
+</body>
+</html>

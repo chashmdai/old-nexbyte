@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Reportes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin">
+<header id="admin-header"></header>
+
+<div class="a-layout">
+  <aside id="admin-aside" class="a-aside"></aside>
+
+  <main id="admin-main" class="a-main container">
+    <nav class="breadcrumb">
+      <a href="index.html">Dashboard</a><span class="sep">/</span><span class="muted">Reportes</span>
+    </nav>
+
+    <h1>Reportes de inventario</h1>
+    <p class="muted" id="genAt">Generado: —</p>
+
+    <section class="cards grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      <div class="card"><div class="muted">Productos</div><div id="k_total" class="kpi">—</div></div>
+      <div class="card"><div class="muted">Activos</div><div id="k_activos" class="kpi">—</div></div>
+      <div class="card"><div class="muted">Sin stock</div><div id="k_zero" class="kpi">—</div></div>
+      <div class="card"><div class="muted">Stock total (unid.)</div><div id="k_units" class="kpi">—</div></div>
+      <div class="card"><div class="muted">Valor inventario</div><div id="k_value" class="kpi">—</div></div>
+      <div class="card"><div class="muted">Categorías</div><div id="k_cats" class="kpi">—</div></div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <h2 style="margin:0">Por categoría</h2>
+        <span class="spacer"></span>
+        <button id="btnCatCsv" class="btn">Exportar CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table-sm">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th style="width:120px">Productos</th>
+              <th style="width:160px">Stock total</th>
+              <th style="width:180px">Valor inventario</th>
+            </tr>
+          </thead>
+          <tbody id="tbCats"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <h2 style="margin:0">Stock bajo (Top 5)</h2>
+      <div class="table-wrap">
+        <table class="table-sm">
+          <thead>
+            <tr>
+              <th style="width:84px">Img</th>
+              <th>Producto</th>
+              <th style="width:160px">Categoría</th>
+              <th style="width:120px">Precio</th>
+              <th style="width:120px">Stock</th>
+            </tr>
+          </thead>
+          <tbody id="tbLow"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <h2 style="margin:0">Exportar productos</h2>
+        <span class="spacer"></span>
+        <button id="btnProdCsv" class="btn">Exportar CSV</button>
+      </div>
+      <p class="muted" style="margin:.4rem 0 0 0">Incluye: id, nombre, categoría, precio, stock, activo, imagen.</p>
+    </section>
+  </main>
+</div>
+
+<div class="a-dim" aria-hidden="true"></div>
+
+<script src="../assets/js/datos.js"></script>
+<script src="../assets/js/layout-admin.js"></script>
+<script src="../assets/js/reportes-admin.js"></script>
+<script>
+  AX.mountLayout();
+
+  const CLP=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+
+  function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function thumb(p){
+    if(p.imagen) return `<img src="${escapeHtml(p.imagen)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">`;
+    return `<div class="muted" style="width:64px;height:64px;border:1px solid var(--ad-border);border-radius:8px;display:flex;align-items:center;justify-content:center">—</div>`;
+  }
+
+  function getAll(){
+    try{return(DB&&DB.products&&DB.products.list)?DB.products.list():[]}catch{return[]}
+  }
+
+  function summarize(){
+    const all=getAll();
+    const total=all.length;
+    const activos=all.filter(p=>!!p.activo).length;
+    const zero=all.filter(p=>Number(p.stock||0)===0).length;
+    const units=all.reduce((s,p)=>s+Number(p.stock||0),0);
+    const value=all.reduce((s,p)=>s+Number(p.stock||0)*Number(p.precio||0),0);
+
+    const catMap={};
+    for(let i=0;i<all.length;i++){
+      const c=all[i].categoria||'Sin categoría';
+      if(!catMap[c]) catMap[c]={cat:c,productos:0,stock:0,valor:0};
+      catMap[c].productos++;
+      catMap[c].stock+=Number(all[i].stock||0);
+      catMap[c].valor+=Number(all[i].stock||0)*Number(all[i].precio||0);
+    }
+    const cats=Object.values(catMap).sort((a,b)=>a.cat.localeCompare(b.cat));
+
+    const low=all.filter(p=>Number(p.stock||0)>0).sort((a,b)=>Number(a.stock||0)-Number(b.stock||0)).slice(0,5);
+
+    return{all,total,activos,zero,units,value,cats,low};
+  }
+
+  function render(){
+    const now=new Date();
+    document.getElementById('genAt').textContent='Generado: '+now.toLocaleString();
+
+    const {total,activos,zero,units,value,cats,low,all}=summarize();
+
+    document.getElementById('k_total').textContent=String(total);
+    document.getElementById('k_activos').textContent=String(activos);
+    document.getElementById('k_zero').textContent=String(zero);
+    document.getElementById('k_units').textContent=String(units);
+    document.getElementById('k_value').textContent=CLP.format(value);
+    document.getElementById('k_cats').textContent=String(cats.length);
+
+    const tbCats=document.getElementById('tbCats');
+    let htmlCats='';
+    for(let i=0;i<cats.length;i++){
+      const r=cats[i];
+      htmlCats+=`
+        <tr>
+          <td>${escapeHtml(r.cat)}</td>
+          <td>${r.productos}</td>
+          <td>${r.stock}</td>
+          <td>${CLP.format(r.valor)}</td>
+        </tr>`;
+    }
+    tbCats.innerHTML=htmlCats||'<tr><td colspan="4" class="muted">Sin datos</td></tr>';
+
+    const tbLow=document.getElementById('tbLow');
+    let htmlLow='';
+    for(let i=0;i<low.length;i++){
+      const p=low[i];
+      htmlLow+=`
+        <tr>
+          <td>${thumb(p)}</td>
+          <td>
+            <div style="font-weight:600">${escapeHtml(p.nombre||'')}</div>
+            <div class="muted" style="font-size:.9rem">#${escapeHtml(String(p.id||''))}</div>
+          </td>
+          <td>${escapeHtml(p.categoria||'—')}</td>
+          <td>${CLP.format(Number(p.precio||0))}</td>
+          <td>${Number(p.stock||0)}</td>
+        </tr>`;
+    }
+    tbLow.innerHTML=htmlLow||'<tr><td colspan="5" class="muted">Sin datos</td></tr>';
+
+    document.getElementById('btnCatCsv').onclick=()=>exportCats(cats);
+    document.getElementById('btnProdCsv').onclick=()=>exportProds(all);
+  }
+
+  function exportCats(cats){
+    if(!cats||!cats.length){alert('Nada para exportar.');return}
+    const rows=[['categoria','productos','stock_total','valor_inventario']];
+    cats.forEach(c=>rows.push([c.cat,c.productos,c.stock,c.valor]));
+    saveCsv(rows,'categorias.csv');
+  }
+
+  function exportProds(all){
+    if(!all||!all.length){alert('Nada para exportar.');return}
+    const rows=[['id','nombre','categoria','precio','stock','activo','imagen']];
+    all.forEach(p=>rows.push([p.id,p.nombre||'',p.categoria||'',Number(p.precio||0),Number(p.stock||0),p.activo?'1':'0',p.imagen||'']));
+    saveCsv(rows,'productos.csv');
+  }
+
+  function saveCsv(rows,name){
+    const needsQuotes=v=>/[",\n]/.test(String(v));
+    const esc=v=>String(v).replace(/"/g,'""');
+    const csv=rows.map(r=>r.map(v=>needsQuotes(v)?`"${esc(v)}"`:String(v)).join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);
+  }
+
+  addEventListener('nx:products-seeded',render);
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Admin — Usuarios (Listado)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="../assets/css/admin.css" rel="stylesheet">
+  <style>
+    .stickybar{
+      position: sticky; top: 8px; z-index: 5;
+      background: var(--ad-surface-2);
+      border:1px solid var(--ad-border);
+      border-radius: var(--ad-radius);
+      padding:10px;
+      box-shadow: var(--ad-shadow);
+      margin: 8px 0 10px 0;
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    }
+    .stickybar .search{ flex: 1 1 320px; display:flex; gap:8px }
+    .stickybar .search input{ width:100% }
+    .stickybar .filters{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .stickybar .filters select{ min-width:160px }
+    #bulkBar{
+      display:none; align-items:center; gap:8px; margin:8px 0 0;
+      background:var(--ad-surface-2); border:1px solid var(--ad-border);
+      border-radius:var(--ad-radius); padding:10px;
+    }
+    #bulkBar.show{ display:flex; }
+    .u{
+      display:flex; align-items:center; gap:10px;
+    }
+    .u .u-av{
+      width:34px; height:34px; border-radius:999px;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-weight:800; letter-spacing:.2px;
+      color:#fff; flex:0 0 34px;
+      background: #4a76ff;
+    }
+    .u .u-name{ font-weight:700 }
+    .u .u-meta{ color:var(--ad-muted); font-size:.9rem }
+    .col-sel{ width: 42px }
+    @media (max-width: 1100px){
+      th[data-col="run"], td[data-col="run"],
+      th[data-col="tel"], td[data-col="tel"]{ display:none }
+    }
+    @media (max-width: 900px){
+      th[data-col="dir"], td[data-col="dir"]{ display:none }
+      .stickybar{ top:6px }
+    }
+  </style>
+</head>
+<body class="admin">
+  <header id="admin-header"></header>
+
+  <div class="a-layout">
+    <aside id="admin-aside" class="a-aside"></aside>
+
+    <main id="admin-main" class="a-main container">
+      <nav class="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <span class="sep">/</span>
+        <span class="muted">Usuarios</span>
+        <span class="sep">/</span>
+        <span class="muted">Listado</span>
+      </nav>
+
+      <h1>Usuarios</h1>
+      <div class="stickybar" id="toolbar">
+        <div class="search">
+          <input id="q" type="text" placeholder="Buscar por RUN, nombre, apellidos o correo…" aria-label="Buscar">
+        </div>
+        <div class="filters">
+          <select id="fRegion" aria-label="Filtrar por región">
+            <option value="">Todas las regiones</option>
+          </select>
+          <select id="fComuna" aria-label="Filtrar por comuna" disabled>
+            <option value="">Todas las comunas</option>
+          </select>
+          <select id="fEstado" aria-label="Filtrar por estado">
+            <option value="">Todos</option>
+            <option value="1">Activos</option>
+            <option value="0">Bloqueados</option>
+          </select>
+        </div>
+        <span class="spacer"></span>
+        <button id="btnExport" class="btn">Exportar CSV</button>
+        <a id="btnNewTop" class="btn primary" href="usuario-nuevo.html">Nuevo usuario</a>
+      </div>
+      <div id="bulkBar">
+        <div class="muted" id="bulkCount" aria-live="polite">0 seleccionados</div>
+        <span class="spacer"></span>
+        <button class="btn" id="bulkEnable">Activar</button>
+        <button class="btn" id="bulkBlock">Bloquear</button>
+        <button class="btn danger" id="bulkDel">Eliminar</button>
+        <button class="btn" id="bulkExport">Exportar selección</button>
+      </div>
+
+      <div id="count" class="muted" style="margin:.5rem 0 0 .2rem"></div>
+
+      <div id="empty" class="card hidden" style="margin-top:10px">
+        <p class="muted">No hay usuarios registrados o no hay coincidencias con los filtros.</p>
+        <a class="btn primary" href="usuario-nuevo.html">Crear el primero</a>
+      </div>
+
+      <div id="tableWrap" class="table-wrap hidden">
+        <table class="table-sm" id="tabla">
+          <thead>
+            <tr>
+              <th class="col-sel"><input type="checkbox" id="selAll" aria-label="Seleccionar todos"></th>
+              <th>Usuario</th>
+              <th data-col="run" style="width:150px">RUN</th>
+              <th style="width:240px">Correo</th>
+              <th data-col="tel" style="width:150px">Teléfono</th>
+              <th style="width:180px">Región / Comuna</th>
+              <th data-col="dir">Dirección</th>
+              <th style="width:120px">Estado</th>
+              <th class="right" style="width:220px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div class="a-dim" aria-hidden="true"></div>
+  <script src="../assets/js/usuarios.js"></script>
+  <script src="../assets/js/layout-admin.js"></script>
+
+  <script>
+    AX.mountLayout();
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    const $q = $('#q');
+    const $tbody = $('#tbody');
+    const $wrap = $('#tableWrap');
+    const $empty = $('#empty');
+    const $btnNewTop = $('#btnNewTop');
+    const $count = $('#count');
+
+    const $fRegion = $('#fRegion');
+    const $fComuna = $('#fComuna');
+    const $fEstado = $('#fEstado');
+    const $selAll = $('#selAll');
+
+    const $bulk = $('#bulkBar');
+    const $bulkCount = $('#bulkCount');
+    const $bulkEnable = $('#bulkEnable');
+    const $bulkBlock = $('#bulkBlock');
+    const $bulkDel = $('#bulkDel');
+    const $bulkExp = $('#bulkExport');
+    const $btnExport = $('#btnExport');
+
+    function escapeHtml(s){
+      return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function formatRun(run){
+      const raw = String(run || '').replace(/\./g,'').replace(/-/g,'').toUpperCase();
+      const m = raw.match(/^(\d+)([0-9K])$/i);
+      if (!m) return run || '';
+      const body = m[1].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      const dv = m[2].toUpperCase();
+      return body + '-' + dv;
+    }
+
+    function colorFromSeed(seed){
+      const s = String(seed||'x');
+      let h = 0;
+      for (let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+      const hue = h % 360;
+      return `hsl(${hue} 70% 45%)`;
+    }
+
+    function getUsersRaw(){
+      try { return (DB && DB.users && DB.users.list) ? DB.users.list() : []; }
+      catch { return []; }
+    }
+    function isActive(u){
+      if (typeof u.activo === 'boolean') return u.activo;
+      if (typeof u.bloqueado === 'boolean') return !u.bloqueado;
+      return true;
+    }
+    function fillRegionComunaOptions(){
+      const all = getUsersRaw();
+      const regions = new Set();
+      const comunasByRegion = new Map();
+      for (const u of all){
+        const r = (u.region||'').trim();
+        const c = (u.comuna||'').trim();
+        if (r){ regions.add(r); if (!comunasByRegion.has(r)) comunasByRegion.set(r, new Set()); if (c) comunasByRegion.get(r).add(c); }
+      }
+      const prevR = $fRegion.value;
+      $fRegion.innerHTML = '<option value="">Todas las regiones</option>' +
+        Array.from(regions).sort().map(r=>`<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+      if (regions.has(prevR)) $fRegion.value = prevR;
+      const region = $fRegion.value.trim();
+      const comunas = region && comunasByRegion.has(region) ? Array.from(comunasByRegion.get(region)).sort() : [];
+      $fComuna.innerHTML = '<option value="">Todas las comunas</option>' +
+        comunas.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      $fComuna.disabled = !region;
+    }
+    const selected = new Set();
+    function updBulkBar(){
+      const n = selected.size;
+      $bulkCount.textContent = `${n} seleccionados`;
+      $bulk.classList.toggle('show', n>0);
+      const rows = $$('.row-sel');
+      $selAll.checked = n>0 && n === rows.length;
+      $selAll.indeterminate = n>0 && n < rows.length;
+    }
+    function badgeEstado(u){
+      const on = isActive(u);
+      return `<button class="btn small ${on?'subtle':''}" data-tgl="${escapeHtml(String(u.run||''))}" aria-pressed="${on?'true':'false'}">${on ? 'Activo' : 'Bloqueado'}</button>`;
+    }
+
+    function row(u){
+      const run = String(u.run || '');
+      const verHref  = 'usuario-mostrar.html?run=' + encodeURIComponent(run);
+      const editHref = 'usuario-editar.html?run=' + encodeURIComponent(run);
+
+      const nombre = String(u.nombre||'').trim();
+      const apell  = String(u.apellidos||'').trim();
+      const full   = (nombre + ' ' + apell).trim() || '(sin nombre)';
+      const avBg   = colorFromSeed(run || u.correo || full);
+      const ini    = (nombre[0]||'?') + (apell[0]||'');
+      const mail   = escapeHtml(u.correo||'');
+      const tel    = escapeHtml(u.telefono||'');
+
+      return `
+        <tr data-run="${escapeHtml(run)}">
+          <td class="col-sel"><input type="checkbox" class="row-sel" data-id="${escapeHtml(run)}"></td>
+          <td>
+            <div class="u">
+              <div class="u-av" style="background:${avBg}">${escapeHtml(ini.toUpperCase())}</div>
+              <div>
+                <div class="u-name"><a href="${verHref}" style="text-decoration:none">${escapeHtml(full)}</a></div>
+                <div class="u-meta">${escapeHtml(mail || '(sin correo)')}</div>
+              </div>
+            </div>
+          </td>
+          <td data-col="run">${escapeHtml(formatRun(run))}</td>
+          <td><a href="mailto:${mail}" style="text-decoration:none">${mail}</a></td>
+          <td data-col="tel"><a href="tel:${tel}" style="text-decoration:none">${tel||''}</a></td>
+          <td>
+            <div>${escapeHtml(u.region||'')}</div>
+            <div class="muted" style="font-size:.9rem">${escapeHtml(u.comuna||'')}</div>
+          </td>
+          <td data-col="dir" title="${escapeHtml(u.direccion||'')}">${escapeHtml(u.direccion||'')}</td>
+          <td>${badgeEstado(u)}</td>
+          <td class="right">
+            <a class="btn" href="${verHref}">Ver</a>
+            <a class="btn" href="${editHref}">Editar</a>
+            <button class="btn danger" data-del>Eliminar</button>
+          </td>
+        </tr>
+      `;
+    }
+    let lastTerm = '', lastRegion = '', lastComuna = '', lastEstado = '';
+
+    function applyFilters(list){
+      const txt = lastTerm.toLowerCase().trim();
+      return list.filter(u=>{
+        if (txt){
+          const blob = [
+            String(u.run||''),
+            u.nombre||'',
+            u.apellidos||'',
+            u.correo||'',
+          ].join(' ').toLowerCase();
+          if (!blob.includes(txt)) return false;
+        }
+        if (lastRegion && String(u.region||'') !== lastRegion) return false;
+        if (lastComuna && String(u.comuna||'') !== lastComuna) return false;
+        if (lastEstado !== ''){
+          const on = isActive(u) ? '1' : '0';
+          if (on !== lastEstado) return false;
+        }
+        return true;
+      });
+    }
+
+    function render(){
+      const all = getUsersRaw();
+      fillRegionComunaOptions();
+
+      const data = applyFilters(all);
+      const has  = data.length > 0;
+
+      $btnNewTop.classList.toggle('hidden', !has);
+      $wrap.classList.toggle('hidden', !has);
+      $empty.classList.toggle('hidden', has);
+      $count.textContent = has ? `${data.length} usuario(s)` : '';
+      selected.clear(); updBulkBar();
+
+      if (!has){ $tbody.innerHTML = ''; return; }
+
+      let html = '';
+      for (let i=0;i<data.length;i++) html += row(data[i]);
+      $tbody.innerHTML = html;
+    }
+    function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+    $q.addEventListener('input', debounce(()=>{ lastTerm = $q.value; render(); }, 250));
+    $fRegion.addEventListener('change', ()=>{
+      lastRegion = $fRegion.value.trim();
+      lastComuna = '';
+      render();
+      fillRegionComunaOptions();
+      $fComuna.value = '';
+    });
+
+    $fComuna.addEventListener('change', ()=>{ lastComuna = $fComuna.value.trim(); render(); });
+    $fEstado.addEventListener('change', ()=>{ lastEstado = $fEstado.value; render(); });
+    $selAll.addEventListener('change', ()=>{
+      const on = $selAll.checked;
+      $$('.row-sel').forEach(chk=>{
+        chk.checked = on;
+        const id = chk.getAttribute('data-id');
+        if (on) selected.add(id); else selected.delete(id);
+      });
+      updBulkBar();
+    });
+
+    document.addEventListener('click', (e) => {
+      const sel = e.target.closest('.row-sel');
+      if (sel){
+        const id = sel.getAttribute('data-id');
+        sel.checked ? selected.add(id) : selected.delete(id);
+        updBulkBar();
+        return;
+      }
+      const btnDel = e.target.closest('[data-del]');
+      if (btnDel){
+        const tr = btnDel.closest('tr'); const run = tr?.getAttribute('data-run');
+        if (!run) return;
+        if (confirm('¿Eliminar usuario RUN ' + formatRun(run) + ' ?')) {
+          let ok=false; try{ ok = DB?.users?.remove ? DB.users.remove(run) : false; }catch{}
+          if (ok){ tr.remove(); render(); } else alert('No se pudo eliminar.');
+        }
+        return;
+      }
+
+      const tgl = e.target.closest('[data-tgl]');
+      if (tgl){
+        const run = tgl.getAttribute('data-tgl');
+        const isOn = tgl.getAttribute('aria-pressed') === 'true';
+        const nextOn = !isOn;
+        let u=null; try{
+          const all = getUsersRaw();
+          u = all.find(x=> String(x.run)===String(run));
+        }catch{}
+        try{
+          if (u && 'activo' in u){
+            DB?.users?.update && DB.users.update(run, { activo: nextOn });
+          } else if (u && 'bloqueado' in u){
+            DB?.users?.update && DB.users.update(run, { bloqueado: !nextOn });
+          } else {
+            DB?.users?.update && DB.users.update(run, { activo: nextOn });
+          }
+        }catch{}
+        render();
+        return;
+      }
+    });
+    function getSelectedUsers(){
+      const ids = Array.from(selected);
+      const all = getUsersRaw();
+      return all.filter(u => ids.includes(String(u.run)));
+    }
+
+    $bulkEnable.addEventListener('click', ()=>{
+      selected.forEach(run => {
+        try{
+          const all = getUsersRaw();
+          const u = all.find(x=> String(x.run)===String(run));
+          if (!u) return;
+          if ('activo' in u) DB.users.update(run, {activo:true});
+          else if ('bloqueado' in u) DB.users.update(run, {bloqueado:false});
+          else DB.users.update(run, {activo:true});
+        }catch{}
+      });
+      render();
+    });
+
+    $bulkBlock.addEventListener('click', ()=>{
+      selected.forEach(run => {
+        try{
+          const all = getUsersRaw();
+          const u = all.find(x=> String(x.run)===String(run));
+          if (!u) return;
+          if ('activo' in u) DB.users.update(run, {activo:false});
+          else if ('bloqueado' in u) DB.users.update(run, {bloqueado:true});
+          else DB.users.update(run, {activo:false});
+        }catch{}
+      });
+      render();
+    });
+
+    $bulkDel.addEventListener('click', ()=>{
+      if (!selected.size) return;
+      if (!confirm('¿Eliminar '+selected.size+' usuario(s) seleccionados?')) return;
+      selected.forEach(run => { try{ DB.users.remove(run); }catch{} });
+      render();
+    });
+    function toCSV(rows){
+      const head = ['run','nombre','apellidos','correo','telefono','region','comuna','direccion','estado'];
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      const body = rows.map(u=>{
+        const estado = isActive(u) ? 'Activo' : 'Bloqueado';
+        return [
+          u.run, u.nombre, u.apellidos, u.correo, u.telefono, u.region, u.comuna, u.direccion, estado
+        ].map(esc).join(',');
+      }).join('\n');
+      return head.join(',')+'\n'+body;
+    }
+    function download(name, text){
+      const blob = new Blob([text], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    $btnExport.addEventListener('click', ()=>{
+      const data = applyFilters(getUsersRaw());
+      if (!data.length) return;
+      download('usuarios.csv', toCSV(data));
+    });
+    $bulkExp.addEventListener('click', ()=>{
+      const data = getSelectedUsers();
+      if (!data.length) return;
+      download('usuarios-seleccion.csv', toCSV(data));
+    });
+    lastTerm = ''; lastRegion=''; lastComuna=''; lastEstado='';
+    render();
+    addEventListener('nx:users-seeded', render);
+  </script>
+</body>
+</html>
